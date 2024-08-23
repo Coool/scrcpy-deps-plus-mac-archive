@@ -11,8 +11,9 @@ FFMPEG_DIRECTORY="$1"
 
 configure_ffmpeg() {
     # -static-libgcc to avoid missing libgcc_s_dw2-1.dll
-    CFLAGS=-static-libgcc \
-    LDFLAGS=-static-libgcc \
+    # -static to avoid dynamic dependency to zlib
+    CFLAGS='-static-libgcc -static' \
+    LDFLAGS='-static-libgcc -static' \
     "$FFMPEG_DIRECTORY"/configure \
         --prefix=install \
         --enable-cross-compile \
@@ -38,6 +39,7 @@ configure_ffmpeg() {
         --enable-decoder=pcm_s16le \
         --enable-decoder=opus \
         --enable-decoder=aac \
+        --enable-decoder=flac \
         --enable-decoder=png \
         --enable-protocol=file \
         --enable-demuxer=image2 \
@@ -45,6 +47,9 @@ configure_ffmpeg() {
         --enable-zlib \
         --enable-muxer=matroska \
         --enable-muxer=mp4 \
+        --enable-muxer=opus \
+        --enable-muxer=flac \
+        --enable-muxer=wav \
         --disable-vulkan
 }
 
@@ -73,12 +78,8 @@ build_install() {
 
 copy_release_binaries() {
     local ABI="$1"
-    mkdir -p "ffmpeg/$ABI/bin"
-    for name in avutil-58 avcodec-60 avformat-60 swresample-4
-    do
-        cp "../build-$ABI/install/bin/$name.dll" "ffmpeg/$ABI/bin/"
-    done
-    cp -r "../build-$ABI/install/include" "ffmpeg/$ABI/"
+    mkdir -p "ffmpeg/$ABI"
+    cp -r "../build-$ABI/install/." "ffmpeg/$ABI/"
 }
 
 mkdir -p ffmpeg
@@ -92,10 +93,6 @@ cd release
 
 copy_release_binaries win64
 copy_release_binaries win32
-
-# libz-mingw-w64 and libz-mingw-w64-dev must be installed
-cp /usr/x86_64-w64-mingw32/lib/zlib1.dll ffmpeg/win64/bin/
-cp /usr/i686-w64-mingw32/lib/zlib1.dll ffmpeg/win32/bin/
 
 7z a ffmpeg-release.7z ffmpeg
 echo "FFmpeg release written to $PWD/ffmpeg-release.7z"
